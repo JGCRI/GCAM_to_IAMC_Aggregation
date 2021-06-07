@@ -1,11 +1,11 @@
 # ------------------------------------------------------------------------------
-# Program Name: GCAM_to_IAM_emissions_aggregation.R
+# Program Name: GCAM_to_IAMC_emissions_aggregation.R
 # Author(s): Maridee Weber
 # Date Last Updated: June 2, 2021
 # Program Purpose: The script aggregates Non-CO2 emissions from GCAM sectors to
-#   IAM sectors
+#   IAMC sectors
 # Input Files: GCAM_nonCO2_emissions.csv
-#              GCAM_IAM-mapping.csv
+#              GCAM_IAMC_mapping.csv
 # Output Files: GCAM_output.csv
 #               diagnostic.csv
 # Notes:
@@ -26,7 +26,7 @@ setwd( "" )
 
 # Read in the emissions data and mapping file
 GCAM_nonCO2_emissions_raw <- read.csv( "GCAM_nonCO2_emissions.csv" )
-GCAM_IAM_mapping <- read.csv( "GCAM_IAM_mapping.csv" )
+GCAM_IAMC_mapping <- read.csv( "GCAM_IAMC_mapping.csv" )
 
 # ------------------------------------------------------------------------------
 # 0.5. Define Constants
@@ -47,7 +47,7 @@ GCAM_nonco2_emissions <- GCAM_nonCO2_emissions_raw %>%
   # filter out pollutants (currently just f-gasses)
   filter( Year >= MIN_YEAR & Year <= MAX_YEAR,
           !( GHG %in% gasses_omit ) ) %>% 
-  # change GHG names to those IAM uses
+  # change GHG names to those IAMC uses
   mutate( GHG = gsub( "SO2_1", "SO2", GHG ),
           GHG = gsub( "SO2_2", "SO2", GHG ),
           GHG = gsub( "SO2_3", "SO2", GHG ),
@@ -66,20 +66,20 @@ AGRAWB <- GCAM_nonco2_emissions %>%
   # separate GHG column for mapping purposes
   separate( GHG, into = c( "GHG", "GCAM_sector" ), sep = "_", remove = F ) %>% 
   # join with mapping table
-  left_join( GCAM_IAM_mapping, by = c( "GCAM_sector" ) )
+  left_join( GCAM_IAMC_mapping, by = c( "GCAM_sector" ) )
 # -------------------------------------------------------
   # 2.2. Non-AGR/AWB
 # -----------------------------------
     # 2.21. create a table that has all non-AGR/AWB emissions, aside from those that are
     # a special case (currently industrial processes, Unmanaged Land, and trn_pass)
     # We can identify special cases by checking which sectors have multiple mapping entries
-special_sectors <- select( GCAM_IAM_mapping, GCAM_sector )[duplicated( select( GCAM_IAM_mapping, GCAM_sector ) ), ]
+special_sectors <- select( GCAM_IAMC_mapping, GCAM_sector )[duplicated( select( GCAM_IAMC_mapping, GCAM_sector ) ), ]
 
 NonAGRAWB <- GCAM_nonco2_emissions %>%
   # filter for AGR and AWB emissions
   filter( !grepl( "AGR|AWB", GHG ),
           !( sector %in% special_sectors ) ) %>% 
-  left_join( GCAM_IAM_mapping, by = c( "sector" = "GCAM_sector" ) )
+  left_join( GCAM_IAMC_mapping, by = c( "sector" = "GCAM_sector" ) )
 # -----------------------------------
     # 2.22. Special Case: industrial processes
     # industrial processes subsector "solvents" is mapped to its own output sector
@@ -88,7 +88,7 @@ solvents <- GCAM_nonco2_emissions %>%
   filter( !grepl( "AGR|AWB", GHG ),
           subsector == "solvents" ) %>% 
   # join with mapping table
-  left_join( GCAM_IAM_mapping, by = c( "sector" = "GCAM_sector", "subsector" = "GCAM_subsector" ) )
+  left_join( GCAM_IAMC_mapping, by = c( "sector" = "GCAM_sector", "subsector" = "GCAM_subsector" ) )
 
 ind_processes <- GCAM_nonco2_emissions %>%
   # filter for AGR and AWB emissions
@@ -96,7 +96,7 @@ ind_processes <- GCAM_nonco2_emissions %>%
           sector == "industrial processes",
           subsector != "solvents" ) %>% 
   # join with mapping table
-  left_join( ( GCAM_IAM_mapping %>% filter( GCAM_subsector != "solvents" ) ), by = c( "sector" = "GCAM_sector" ) )
+  left_join( ( GCAM_IAMC_mapping %>% filter( GCAM_subsector != "solvents" ) ), by = c( "sector" = "GCAM_sector" ) )
 # -----------------------------------
     # 2.23. Special Case: trn_pass
     # trn_pass subsector "Domestic Aviation" is mapped to its own output sector
@@ -105,7 +105,7 @@ dom_aviation <- GCAM_nonco2_emissions %>%
   filter( !grepl( "AGR|AWB", GHG ),
           subsector == "Domestic Aviation" ) %>% 
   # join with mapping table
-  left_join( GCAM_IAM_mapping, by = c( "sector" = "GCAM_sector", "subsector" = "GCAM_subsector" ) )
+  left_join( GCAM_IAMC_mapping, by = c( "sector" = "GCAM_sector", "subsector" = "GCAM_subsector" ) )
 
 trn_pass <- GCAM_nonco2_emissions %>%
   # filter for AGR and AWB emissions
@@ -113,7 +113,7 @@ trn_pass <- GCAM_nonco2_emissions %>%
           sector == "trn_pass",
           subsector != "Domestic Aviation" ) %>% 
   # join with mapping table
-  left_join( ( GCAM_IAM_mapping %>% filter( GCAM_subsector != "Domestic Aviation" ) ), by = c( "sector" = "GCAM_sector" ) )
+  left_join( ( GCAM_IAMC_mapping %>% filter( GCAM_subsector != "Domestic Aviation" ) ), by = c( "sector" = "GCAM_sector" ) )
 # -----------------------------------
     # 2.24. Special Case: UnmanagedLand
     # UnmanagedLand subsectors map to different output sectors
@@ -124,7 +124,7 @@ forest <- GCAM_nonco2_emissions %>%
   # separate the subsector for mapping purposes
   separate( subsector, into = c( "subsector", "specific" ), sep = "_", remove = F ) %>% 
   # join with mapping table
-  left_join( GCAM_IAM_mapping, by = c( "sector" = "GCAM_sector", "subsector" = "GCAM_subsector" ) ) %>% 
+  left_join( GCAM_IAMC_mapping, by = c( "sector" = "GCAM_sector", "subsector" = "GCAM_subsector" ) ) %>% 
   # remove "specific" column
   select( -specific )
 
@@ -135,7 +135,7 @@ grassland <- GCAM_nonco2_emissions %>%
   # separate the subsector for mapping purposes
   separate( subsector, into = c( "subsector", "specific" ), sep = "_", remove = F ) %>% 
   # join with mapping table
-  left_join( GCAM_IAM_mapping, by = c( "sector" = "GCAM_sector", "subsector" = "GCAM_subsector" ) ) %>% 
+  left_join( GCAM_IAMC_mapping, by = c( "sector" = "GCAM_sector", "subsector" = "GCAM_subsector" ) ) %>% 
   # remove "specific" column
   select( -specific )
 
@@ -202,15 +202,9 @@ GCAM_output <- all_emissions_agg %>%
   # make table wide
   spread( key = "Year", value = "value" )
 
-# Create the specified output directory inside the current working directory
-OUTPUT_FOLDER <- paste(getwd(), "/../output/", sep = "")
-dir.create( OUTPUT_FOLDER )
-
 # write the harmonized data table
-write.xlsx( GCAM_output, file = paste( OUTPUT_FOLDER, "GCAM_output.xlsx" ), sheetName = "GCAM_output", 
+write.xlsx( GCAM_output, file =  "../output/GCAM_output.xlsx", sheetName = "GCAM_output", 
            col.names = T, row.names = F, append = F )
-
-write.csv( GCAM_output, paste( OUTPUT_FOLDER, "GCAM_output.csv"), row.names = F )
 
 # ------------------------------------------------------------------------------
 # 5. Diagnostics
@@ -254,5 +248,5 @@ diagnostic <- GCAM_nonco2_emissions_original %>%
   mutate( original_minus_output = value_orig - value )
 
 # write the diagnostic table
-write.csv( diagnostic, paste( OUTPUT_FOLDER, "diagnostic.csv" ), row.names = F )
+write.csv( diagnostic, "../output/diagnostic.csv", row.names = F )
 

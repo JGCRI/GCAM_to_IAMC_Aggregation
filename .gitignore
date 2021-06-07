@@ -1,0 +1,4 @@
+# ignore outputs
+output/*.csv
+output/*.xlsx
+
