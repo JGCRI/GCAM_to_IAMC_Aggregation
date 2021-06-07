@@ -8,8 +8,10 @@ Most GCAM sectors are mapped directly to an IAMC output sector, with a few excep
 
 
 * Agriculture (AGR) and Agricultural Waste Burning (AWB) emissions: These emissions are mapped to an output sector based on a suffix that is added to their GHG by default. For example, an entry with a GHG of “N2O_AWB” would be mapped to the Agricultural Waste Burning output sector.
-* Some GCAM sectors have subsectors that are mapped to a separate output sector. For example, GCAM sector “industrial processes” has multiple subsectors. All these subsectors are mapped to the Industrial Sector output sector, except for GCAM subsector “solvents”, which is mapped to the Solvents Production and Application output sector. 
-* Other exceptions include GCAM sector “trn_pass” and “UnmanagedLand”. These are handled case by base in the script.
+* Some GCAM subsectors are mapped to a separate output sector. For example, GCAM sector “industrial processes” has multiple subsectors. Most of these subsectors are mapped to the Industrial Sector output sector, except for GCAM subsector “solvents”, which is mapped to the Solvents Production and Application output sector. 
+* Other exceptions include GCAM sector “trn_pass” and “UnmanagedLand”.
+
+  These are handled case by case in the script.
 
 
 
@@ -22,7 +24,7 @@ International Shipping and aviation are aggregated globally because they are map
 
 `GCAM_nonCO2_emissions.csv`:
 
-The GCAM nonCO2 emissions input should be the result of a query from the relevant GCAM database for emissions by subsector. The file can contain multiple scenarios. An truncated example is included (`GCAM_nonCO2_emissions_example.csv`) with proper column names.
+The GCAM nonCO2 emissions input should be the result of a query from the relevant GCAM database for emissions by subsector. The file can contain multiple scenarios. A truncated example is included (`GCAM_nonCO2_emissions_example.csv`) with proper column names.
 
 
 
@@ -41,12 +43,12 @@ Data is written to the `output` folder:
 
 •	`GCAM_output.xlsx` contains the aggregated emissions, and is used as an input for downscaling.
 
-•	`diagnostic.csv` contains total input and output emissions for each scenario, year, and GHG, as well as the difference in emissions (should be 0t, or very close to). “value_original” indicates emissions in the input data (`GCAM_nonCO2_emissions.csv`) and “value” indicates emissions in the output data (`GCAM_output.xlsx`). If there are differences here that are not tiny, this probably indicates a missing sector in the mapping file.
+•	`diagnostic.csv` contains total input and output emissions for each scenario, year, and GHG, as well as the difference in emissions (should be 0, or very close to). “value_original” indicates emissions in the input data (`GCAM_nonCO2_emissions.csv`) and “value” indicates emissions in the output data (`GCAM_output.xlsx`). If there are differences here that are not tiny, this probably indicates a missing sector in the mapping file.
 
 
 
 **Using This script**
 
 
-To use this script, the user must create the `GCAM_nonCO2_emissions.csv` input and place it in the `input` folder. This should be the result of a query. The user must also set the working directory path in `GCAM_to_IAMC_Aggregation.R` to their `input` folder on Line #25.
+To use this script, the user must create the `GCAM_nonCO2_emissions.csv` input and place it in the `input` folder. This should be the result of a query. The user must also set the working directory to their `input` folder.
 

@@ -21,9 +21,6 @@ library( xlsx )
 # ------------------------------------------------------------------------------
 # 0. Read in inputs
 # -------------------------------------------------------
-# Set wd to the input directory that holds the GCAM emissions output
-setwd( "" )
-
 # Read in the emissions data and mapping file
 GCAM_nonCO2_emissions_raw <- read.csv( "GCAM_nonCO2_emissions.csv" )
 GCAM_IAMC_mapping <- read.csv( "GCAM_IAMC_mapping.csv" )
