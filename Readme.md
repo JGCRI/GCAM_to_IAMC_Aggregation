@@ -52,3 +52,4 @@ Data is written to the `output` folder:
 
 To use this script, the user must create the `GCAM_nonCO2_emissions.csv` input and place it in the `input` folder. This should be the result of a query. The user must also set the working directory to their `input` folder.
 
+Note that the IAMC [downscaling and gridding](https://github.com/iiasa/emissions_downscaling) code will work best if you use a base-year historical emissions input file that is consistent with the version of the [CEDS](https://github.com/jgcri/ceds) emissions data used to calibrate GCAM. See the wiki section of the IAMC downscaling and gridding code.
