@@ -24,8 +24,11 @@ International Shipping and aviation are aggregated globally because they are map
 
 `GCAM_nonCO2_emissions.csv`:
 
-The GCAM nonCO2 emissions input should be the result of a query from the relevant GCAM database for emissions by subsector. The file can contain multiple scenarios. A truncated example is included (`GCAM_nonCO2_emissions_example.csv`) with proper column names.
+The GCAM nonCO2 emissions input should be the result of a query from the relevant GCAM database for emissions by subsector. The file can contain multiple scenarios. A truncated example is included (`GCAM_nonCO2_emissions_example.csv`) with proper column names and formatting.
 
+`GCAM_nonCO2_resource_emissions.csv`:
+
+The GCAM nonCO2 resource emissions input should be the result of a query from the relevant GCAM database for emissions by resource production. The file can contain multiple scenarios. A truncated example is included (`GCAM_nonCO2_resource_emissions_example.csv`) with proper column names and formatting.
 
 
 `GCAM_IAMC_mapping.csv`:
@@ -50,6 +53,6 @@ Data is written to the `output` folder:
 **Using This script**
 
 
-To use this script, the user must create the `GCAM_nonCO2_emissions.csv` input and place it in the `input` folder. This should be the result of a query. The user must also set the working directory to their `input` folder.
+To use this script, the user must create the `GCAM_nonCO2_emissions.csv` and `GCAM_nonco2_resource_emissions.csv` inputs and place them in the `input` folder. These should be the results of two queries. The user must also set the working directory to their `input` folder.
 
 Note that the IAMC [downscaling and gridding](https://github.com/iiasa/emissions_downscaling) code will work best if you use a base-year historical emissions input file that is consistent with the version of the [CEDS](https://github.com/jgcri/ceds) emissions data used to calibrate GCAM. See the wiki section of the IAMC downscaling and gridding code.
