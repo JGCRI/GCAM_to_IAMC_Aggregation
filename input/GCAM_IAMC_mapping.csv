@@ -1,6 +1,9 @@
 GCAM_sector,GCAM_subsector,Output_Sector,Regional
 airCO2,,Energy Sector|Harmonized-DB,1
 H2 central production,,Energy Sector|Harmonized-DB,1
+coal,,Energy Sector|Harmonized-DB,1
+crude oil,,Energy Sector|Harmonized-DB,1
+natural gas,,Energy Sector|Harmonized-DB,1
 H2 forecourt production,,Energy Sector|Harmonized-DB,1
 N fertilizer,,Industrial Sector|Harmonized-DB,1
 comm heating,,Residential Commercial Other|Harmonized-DB,1
