@@ -5,6 +5,7 @@
 # Program Purpose: The script aggregates Non-CO2 emissions from GCAM sectors to
 #   IAMC sectors
 # Input Files: GCAM_nonCO2_emissions.csv
+#              GCAM_nonco2_resource_emissions.csv
 #              GCAM_IAMC_mapping.csv
 # Output Files: GCAM_output.csv
 #               diagnostic.csv
@@ -22,8 +23,9 @@ library( xlsx )
 # 0. Read in inputs
 # -------------------------------------------------------
 # Read in the emissions data and mapping file
-GCAM_nonCO2_emissions_raw <- read.csv( "GCAM_nonCO2_emissions.csv" )
-GCAM_IAMC_mapping <- read.csv( "GCAM_IAMC_mapping.csv" )
+GCAM_nonCO2_emissions_raw <- read_csv( "GCAM_nonCO2_emissions.csv" )
+GCAM_nonCO2_resource_emissions_raw <- read_csv( "GCAM_nonCO2_resource_emissions.csv" )
+GCAM_IAMC_mapping <- read_csv( "GCAM_IAMC_mapping.csv" )
 
 # ------------------------------------------------------------------------------
 # 0.5. Define Constants
@@ -37,19 +39,54 @@ gasses_omit <- c( "C2F6", "CF4", "HFC125", "HFC134a", "HFC143a", "HFC152a",
 # ------------------------------------------------------------------------------
 # 1. Process the raw data inputs
 # -------------------------------------------------------
-GCAM_nonco2_emissions <- GCAM_nonCO2_emissions_raw %>%
-  # remove unnecessary columns
-  select( -c( "date", "file" ) ) %>% 
+GCAM_nonco2_nonresource_emissions <- GCAM_nonCO2_emissions_raw %>%
+  # make data long
+  gather( "Year", "value", -c( "scenario", "region", "sector", "subsector", "GHG", "Units" ) ) %>% 
   # filter for years of interest
   # filter out pollutants (currently just f-gasses)
   filter( Year >= MIN_YEAR & Year <= MAX_YEAR,
-          !( GHG %in% gasses_omit ) ) %>% 
+          !( GHG %in% gasses_omit ) ) %>%
   # change GHG names to those IAMC uses
   mutate( GHG = gsub( "SO2_1", "SO2", GHG ),
           GHG = gsub( "SO2_2", "SO2", GHG ),
           GHG = gsub( "SO2_3", "SO2", GHG ),
           GHG = gsub( "SO2_4", "SO2", GHG ),
-          GHG = gsub( "NMVOC", "VOC", GHG ) )
+          GHG = gsub( "NMVOC", "VOC", GHG ) ) %>% 
+  # isolate scenario name
+  separate( scenario, c( "scenario", "date" ), sep = ",", remove = F ) %>% 
+  # remove date column
+  select( -date ) %>% 
+  # make year column numeric
+  mutate( Year = as.numeric( Year ) )
+
+# process the resource emissions input
+GCAM_nonco2_resource_emissions <- GCAM_nonCO2_resource_emissions_raw %>%
+  # make data long
+  gather( "Year", "value", -c( "scenario", "region", "resource", "subresource", "GHG", "Units" ) ) %>% 
+  # filter for years of interest
+  # filter out pollutants (currently just f-gasses)
+  filter( Year >= MIN_YEAR & Year <= MAX_YEAR,
+          !( GHG %in% gasses_omit ) ) %>%
+  # change GHG names to those IAMC uses
+  mutate( GHG = gsub( "SO2_1", "SO2", GHG ),
+          GHG = gsub( "SO2_2", "SO2", GHG ),
+          GHG = gsub( "SO2_3", "SO2", GHG ),
+          GHG = gsub( "SO2_4", "SO2", GHG ),
+          GHG = gsub( "NMVOC", "VOC", GHG ) ) %>% 
+  # change column names for bind_rows
+  rename( "sector" = resource,
+          "subsector" = subresource ) %>% 
+  # isolate scenario name
+  separate( scenario, c( "scenario", "date" ), sep = ",", remove = F ) %>% 
+  # remove date column
+  select( -date ) %>% 
+  # make year column numeric
+  mutate( Year = as.numeric( Year ) )
+  
+
+  # bind the two emissions tables
+GCAM_nonco2_emissions <- GCAM_nonco2_nonresource_emissions %>%
+  bind_rows( GCAM_nonco2_resource_emissions )
 
 # ------------------------------------------------------------------------------
 # 2. Mapping
@@ -61,7 +98,7 @@ AGRAWB <- GCAM_nonco2_emissions %>%
   # Emissions from AGR and AWB have this as a suffix to their GHG
   filter( grepl( "AGR|AWB", GHG ) ) %>%
   # separate GHG column for mapping purposes
-  separate( GHG, into = c( "GHG", "GCAM_sector" ), sep = "_", remove = F ) %>% 
+  separate( GHG, into = c( "GHG", "GCAM_sector" ), sep = "_", remove = F ) %>%
   # join with mapping table
   left_join( GCAM_IAMC_mapping, by = c( "GCAM_sector" ) )
 # -------------------------------------------------------
@@ -75,7 +112,7 @@ special_sectors <- select( GCAM_IAMC_mapping, GCAM_sector )[duplicated( select( 
 NonAGRAWB <- GCAM_nonco2_emissions %>%
   # filter for AGR and AWB emissions
   filter( !grepl( "AGR|AWB", GHG ),
-          !( sector %in% special_sectors ) ) %>% 
+          !( sector %in% special_sectors ) ) %>%
   left_join( GCAM_IAMC_mapping, by = c( "sector" = "GCAM_sector" ) )
 # -----------------------------------
     # 2.22. Special Case: industrial processes
@@ -83,7 +120,7 @@ NonAGRAWB <- GCAM_nonco2_emissions %>%
 solvents <- GCAM_nonco2_emissions %>%
   # filter for AGR and AWB emissions
   filter( !grepl( "AGR|AWB", GHG ),
-          subsector == "solvents" ) %>% 
+          subsector == "solvents" ) %>%
   # join with mapping table
   left_join( GCAM_IAMC_mapping, by = c( "sector" = "GCAM_sector", "subsector" = "GCAM_subsector" ) )
 
@@ -91,7 +128,7 @@ ind_processes <- GCAM_nonco2_emissions %>%
   # filter for AGR and AWB emissions
   filter( !grepl( "AGR|AWB", GHG ),
           sector == "industrial processes",
-          subsector != "solvents" ) %>% 
+          subsector != "solvents" ) %>%
   # join with mapping table
   left_join( ( GCAM_IAMC_mapping %>% filter( GCAM_subsector != "solvents" ) ), by = c( "sector" = "GCAM_sector" ) )
 # -----------------------------------
@@ -100,7 +137,7 @@ ind_processes <- GCAM_nonco2_emissions %>%
 dom_aviation <- GCAM_nonco2_emissions %>%
   # filter for AGR and AWB emissions
   filter( !grepl( "AGR|AWB", GHG ),
-          subsector == "Domestic Aviation" ) %>% 
+          subsector == "Domestic Aviation" ) %>%
   # join with mapping table
   left_join( GCAM_IAMC_mapping, by = c( "sector" = "GCAM_sector", "subsector" = "GCAM_subsector" ) )
 
@@ -108,7 +145,7 @@ trn_pass <- GCAM_nonco2_emissions %>%
   # filter for AGR and AWB emissions
   filter( !grepl( "AGR|AWB", GHG ),
           sector == "trn_pass",
-          subsector != "Domestic Aviation" ) %>% 
+          subsector != "Domestic Aviation" ) %>%
   # join with mapping table
   left_join( ( GCAM_IAMC_mapping %>% filter( GCAM_subsector != "Domestic Aviation" ) ), by = c( "sector" = "GCAM_sector" ) )
 # -----------------------------------
@@ -119,20 +156,20 @@ forest <- GCAM_nonco2_emissions %>%
   filter( !grepl( "AGR|AWB", GHG ),
           grepl( "Deforest|ForestFire", subsector ) ) %>%
   # separate the subsector for mapping purposes
-  separate( subsector, into = c( "subsector", "specific" ), sep = "_", remove = F ) %>% 
+  separate( subsector, into = c( "subsector", "specific" ), sep = "_", remove = F ) %>%
   # join with mapping table
-  left_join( GCAM_IAMC_mapping, by = c( "sector" = "GCAM_sector", "subsector" = "GCAM_subsector" ) ) %>% 
+  left_join( GCAM_IAMC_mapping, by = c( "sector" = "GCAM_sector", "subsector" = "GCAM_subsector" ) ) %>%
   # remove "specific" column
   select( -specific )
 
 grassland <- GCAM_nonco2_emissions %>%
   # filter for AGR and AWB emissions
   filter( !grepl( "AGR|AWB", GHG ),
-          grepl( "GrasslandFire", subsector ) ) %>% 
+          grepl( "GrasslandFire", subsector ) ) %>%
   # separate the subsector for mapping purposes
-  separate( subsector, into = c( "subsector", "specific" ), sep = "_", remove = F ) %>% 
+  separate( subsector, into = c( "subsector", "specific" ), sep = "_", remove = F ) %>%
   # join with mapping table
-  left_join( GCAM_IAMC_mapping, by = c( "sector" = "GCAM_sector", "subsector" = "GCAM_subsector" ) ) %>% 
+  left_join( GCAM_IAMC_mapping, by = c( "sector" = "GCAM_sector", "subsector" = "GCAM_subsector" ) ) %>%
   # remove "specific" column
   select( -specific )
 
@@ -142,65 +179,65 @@ grassland <- GCAM_nonco2_emissions %>%
 # 3.1. Bind
 # -----------------------------------
 # Bind all of the separate tables together so we have all emissions, mapped to output sectors
-all_emissions_not_agg <- AGRAWB %>% 
+all_emissions_not_agg <- AGRAWB %>%
   bind_rows( NonAGRAWB, solvents, ind_processes, dom_aviation, trn_pass, forest, grassland )
 # -------------------------------------------------------
 # 3.2. Aggregate
 # -----------------------------------
 # aggregate based off of output sector and whether the aggregation should be regional or global
     # Regional
-regional <- all_emissions_not_agg %>% 
+regional <- all_emissions_not_agg %>%
   # filter for entries that will be aggregated regionally
-  filter( Regional == 1 ) %>% 
+  filter( Regional == 1 ) %>%
   # aggregate based off of output sector
-  group_by( scenario, region, Units, GHG, Year, Output_Sector ) %>% 
-  mutate( value = sum( value ) ) %>% 
+  group_by( scenario, region, Units, GHG, Year, Output_Sector ) %>%
+  mutate( value = sum( value ) ) %>%
   distinct( scenario, region, Units, GHG, Year, Output_Sector, value )
 
     # Global
-global <- all_emissions_not_agg %>% 
+global <- all_emissions_not_agg %>%
   # filter for entries that will be aggregated regionally
-  filter( Regional != 1 ) %>% 
+  filter( Regional != 1 ) %>%
   # aggregate based off of output sector
-  group_by( scenario, Units, GHG, Year, Output_Sector ) %>% 
-  mutate( value = sum( value ) ) %>% 
-  distinct( scenario, Units, GHG, Year, Output_Sector, value ) %>% 
+  group_by( scenario, Units, GHG, Year, Output_Sector ) %>%
+  mutate( value = sum( value ) ) %>%
+  distinct( scenario, Units, GHG, Year, Output_Sector, value ) %>%
   # add a "World" region for these entries
   mutate( "region" = "World" )
 
     # Bind the Regional and Global tables
-all_emissions_agg <- regional %>% 
-  bind_rows( global ) %>% 
+all_emissions_agg <- regional %>%
+  bind_rows( global ) %>%
   ungroup()
 
 # ------------------------------------------------------------------------------
 # 4. Formatting
 # -------------------------------------------------------
 # 4.1. Format Output Table
-GCAM_output <- all_emissions_agg %>% 
+GCAM_output <- all_emissions_agg %>%
   # add Model column
-  mutate( "Model" = "GCAM52" ) %>% 
+  mutate( "Model" = "GCAM52" ) %>%
   # rename columns to match desired output
   rename( Scenario = scenario,
           Region = region,
-          Variable = Output_Sector ) %>% 
+          Variable = Output_Sector ) %>%
   # make Variable column have the right prefix
   mutate( "prefix" = "CEDS+|9+ Sectors|Emissions|",
-          "dash" = "|" ) %>% 
-  unite( Variable, prefix, GHG, dash, Variable, sep = "", remove = F ) %>% 
+          "dash" = "|" ) %>%
+  unite( Variable, prefix, GHG, dash, Variable, sep = "", remove = F ) %>%
   # change SO2 to Sulfur in Variable column
   mutate( Variable = gsub( "SO2", "Sulfur", Variable ),
   # make unit column "Unit Pollutant/yr"
-          "per_year" = "/yr" ) %>% 
-  unite( Unit, GHG, Units, sep = " " ) %>% 
-  unite( Unit, Unit, per_year, sep = "" ) %>% 
+          "per_year" = "/yr" ) %>%
+  unite( Unit, GHG, Units, sep = " " ) %>%
+  unite( Unit, Unit, per_year, sep = "" ) %>%
   # select columns to retain
-  select( -c( prefix, dash ) ) %>% 
+  select( -c( prefix, dash ) ) %>%
   # make table wide
   spread( key = "Year", value = "value" )
 
 # write the harmonized data table
-write.xlsx( GCAM_output, file =  "../output/GCAM_output.xlsx", sheetName = "GCAM_output", 
+write.xlsx( GCAM_output, file =  "../output/GCAM_output.xlsx", sheetName = "GCAM_output",
            col.names = T, row.names = F, append = F )
 
 # ------------------------------------------------------------------------------
@@ -209,28 +246,28 @@ write.xlsx( GCAM_output, file =  "../output/GCAM_output.xlsx", sheetName = "GCAM
 # 5.1. Ensure that all original emissions are accounted for
 # -----------------------------------
   # 5.11. get original emissions by scenario, species, and year
-GCAM_nonco2_emissions_original <- GCAM_nonco2_emissions %>% 
-  separate( GHG, into = c( "GHG", "GCAM_sector" ), sep = "_", remove = F ) %>% 
+GCAM_nonco2_emissions_original <- GCAM_nonco2_emissions %>%
+  separate( GHG, into = c( "GHG", "GCAM_sector" ), sep = "_", remove = F ) %>%
   # filter out pollutants (currently just f-gasses)
-  filter( !( GHG %in% gasses_omit ) ) %>% 
-  group_by( scenario, GHG, Year ) %>% 
-  mutate( value_orig = sum( value ) ) %>% 
+  filter( !( GHG %in% gasses_omit ) ) %>%
+  group_by( scenario, GHG, Year ) %>%
+  mutate( value_orig = sum( value ) ) %>%
   distinct( scenario, GHG, Year, value_orig )
 # -----------------------------------
   # 5.12. get output emissions by species and year
-GCAM_nonco2_emissions_output <- GCAM_output %>% 
-  gather( key = "Year", value = "value", -c( Scenario, Region, Unit, Variable, Model ) ) %>% 
-  separate( Unit, into = c( "GHG", "Other" ), sep = " ", remove = F ) %>% 
-  group_by( Scenario, GHG, Year ) %>% 
-  mutate( value = sum( value ) ) %>% 
-  distinct( Scenario, GHG, Year, value ) %>% 
-  ungroup() %>% 
+GCAM_nonco2_emissions_output <- GCAM_output %>%
+  gather( key = "Year", value = "value", -c( Scenario, Region, Unit, Variable, Model ) ) %>%
+  separate( Unit, into = c( "GHG", "Other" ), sep = " ", remove = F ) %>%
+  group_by( Scenario, GHG, Year ) %>%
+  mutate( value = sum( value ) ) %>%
+  distinct( Scenario, GHG, Year, value ) %>%
+  ungroup() %>%
   mutate( Year = as.numeric( Year ) )
 # -----------------------------------
   # 5.13. diagnostic check
-diagnostic_check <- GCAM_nonco2_emissions_original %>% 
-  left_join( GCAM_nonco2_emissions_output, by = c( "scenario" = "Scenario", "Year", "GHG" ) ) %>% 
-  mutate( original_minus_output = value_orig - value ) %>% 
+diagnostic_check <- GCAM_nonco2_emissions_original %>%
+  left_join( GCAM_nonco2_emissions_output, by = c( "scenario" = "Scenario", "Year", "GHG" ) ) %>%
+  mutate( original_minus_output = value_orig - value ) %>%
   filter( original_minus_output != 0 )
 
 if ( length( diagnostic_check$value > 0 ) ) {
@@ -240,8 +277,8 @@ if ( length( diagnostic_check$value > 0 ) ) {
 }
 
 # 5.14. diagnostic output
-diagnostic <- GCAM_nonco2_emissions_original %>% 
-  left_join( GCAM_nonco2_emissions_output, by = c( "scenario" = "Scenario", "Year", "GHG" ) ) %>% 
+diagnostic <- GCAM_nonco2_emissions_original %>%
+  left_join( GCAM_nonco2_emissions_output, by = c( "scenario" = "Scenario", "Year", "GHG" ) ) %>%
   mutate( original_minus_output = value_orig - value )
 
 # write the diagnostic table
