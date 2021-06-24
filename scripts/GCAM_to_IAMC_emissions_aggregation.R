@@ -41,7 +41,7 @@ gasses_omit <- c( "C2F6", "CF4", "HFC125", "HFC134a", "HFC143a", "HFC152a",
 # -------------------------------------------------------
 GCAM_nonco2_nonresource_emissions <- GCAM_nonCO2_emissions_raw %>%
   # make data long
-  gather( "Year", "value", -c( "scenario", "region", "sector", "subsector", "GHG", "Units" ) ) %>% 
+  gather( "Year", "value", -c( "scenario", "region", "sector", "subsector", "GHG", "Units" ) ) %>%
   # filter for years of interest
   # filter out pollutants (currently just f-gasses)
   filter( Year >= MIN_YEAR & Year <= MAX_YEAR,
@@ -51,18 +51,18 @@ GCAM_nonco2_nonresource_emissions <- GCAM_nonCO2_emissions_raw %>%
           GHG = gsub( "SO2_2", "SO2", GHG ),
           GHG = gsub( "SO2_3", "SO2", GHG ),
           GHG = gsub( "SO2_4", "SO2", GHG ),
-          GHG = gsub( "NMVOC", "VOC", GHG ) ) %>% 
+          GHG = gsub( "NMVOC", "VOC", GHG ) ) %>%
   # isolate scenario name
-  separate( scenario, c( "scenario", "date" ), sep = ",", remove = F ) %>% 
+  separate( scenario, c( "scenario", "date" ), sep = ",", remove = F ) %>%
   # remove date column
-  select( -date ) %>% 
+  select( -date ) %>%
   # make year column numeric
   mutate( Year = as.numeric( Year ) )
 
 # process the resource emissions input
 GCAM_nonco2_resource_emissions <- GCAM_nonCO2_resource_emissions_raw %>%
   # make data long
-  gather( "Year", "value", -c( "scenario", "region", "resource", "subresource", "GHG", "Units" ) ) %>% 
+  gather( "Year", "value", -c( "scenario", "region", "resource", "subresource", "GHG", "Units" ) ) %>%
   # filter for years of interest
   # filter out pollutants (currently just f-gasses)
   filter( Year >= MIN_YEAR & Year <= MAX_YEAR,
@@ -72,17 +72,17 @@ GCAM_nonco2_resource_emissions <- GCAM_nonCO2_resource_emissions_raw %>%
           GHG = gsub( "SO2_2", "SO2", GHG ),
           GHG = gsub( "SO2_3", "SO2", GHG ),
           GHG = gsub( "SO2_4", "SO2", GHG ),
-          GHG = gsub( "NMVOC", "VOC", GHG ) ) %>% 
+          GHG = gsub( "NMVOC", "VOC", GHG ) ) %>%
   # change column names for bind_rows
   rename( "sector" = resource,
-          "subsector" = subresource ) %>% 
+          "subsector" = subresource ) %>%
   # isolate scenario name
-  separate( scenario, c( "scenario", "date" ), sep = ",", remove = F ) %>% 
+  separate( scenario, c( "scenario", "date" ), sep = ",", remove = F ) %>%
   # remove date column
-  select( -date ) %>% 
+  select( -date ) %>%
   # make year column numeric
   mutate( Year = as.numeric( Year ) )
-  
+
 
   # bind the two emissions tables
 GCAM_nonco2_emissions <- GCAM_nonco2_nonresource_emissions %>%
@@ -235,6 +235,9 @@ GCAM_output <- all_emissions_agg %>%
   select( -c( prefix, dash ) ) %>%
   # make table wide
   spread( key = "Year", value = "value" )
+
+# convert to data frame for Excel write-out to work
+GCAM_output <- as.data.frame( GCAM_output )
 
 # write the harmonized data table
 write.xlsx( GCAM_output, file =  "../output/GCAM_output.xlsx", sheetName = "GCAM_output",
