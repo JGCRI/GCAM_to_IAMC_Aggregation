@@ -108,11 +108,12 @@ AGRAWB <- GCAM_nonco2_emissions %>%
     # a special case (currently industrial processes, Unmanaged Land, and trn_pass)
     # We can identify special cases by checking which sectors have multiple mapping entries
 special_sectors <- select( GCAM_IAMC_mapping, GCAM_sector )[duplicated( select( GCAM_IAMC_mapping, GCAM_sector ) ), ]
+special_sectors_list <- unique( special_sectors$GCAM_sector )
 
 NonAGRAWB <- GCAM_nonco2_emissions %>%
   # filter for AGR and AWB emissions
   filter( !grepl( "AGR|AWB", GHG ),
-          !( sector %in% special_sectors ) ) %>%
+          !( sector %in% special_sectors_list ) ) %>%
   left_join( GCAM_IAMC_mapping, by = c( "sector" = "GCAM_sector" ) )
 # -----------------------------------
     # 2.22. Special Case: industrial processes
@@ -130,7 +131,7 @@ ind_processes <- GCAM_nonco2_emissions %>%
           sector == "industrial processes",
           subsector != "solvents" ) %>%
   # join with mapping table
-  left_join( ( GCAM_IAMC_mapping %>% filter( GCAM_subsector != "solvents" ) ), by = c( "sector" = "GCAM_sector" ) )
+  left_join( ( GCAM_IAMC_mapping %>% filter( is.na( GCAM_subsector ) ) ), by = c( "sector" = "GCAM_sector" ) )
 # -----------------------------------
     # 2.23. Special Case: trn_pass
     # trn_pass subsector "Domestic Aviation" is mapped to its own output sector
@@ -147,7 +148,7 @@ trn_pass <- GCAM_nonco2_emissions %>%
           sector == "trn_pass",
           subsector != "Domestic Aviation" ) %>%
   # join with mapping table
-  left_join( ( GCAM_IAMC_mapping %>% filter( GCAM_subsector != "Domestic Aviation" ) ), by = c( "sector" = "GCAM_sector" ) )
+  left_join( ( GCAM_IAMC_mapping %>% filter( is.na( GCAM_subsector ) ) ), by = c( "sector" = "GCAM_sector" ) )
 # -----------------------------------
     # 2.24. Special Case: UnmanagedLand
     # UnmanagedLand subsectors map to different output sectors
@@ -256,6 +257,7 @@ GCAM_nonco2_emissions_original <- GCAM_nonco2_emissions %>%
   group_by( scenario, GHG, Year ) %>%
   mutate( value_orig = sum( value ) ) %>%
   distinct( scenario, GHG, Year, value_orig )
+
 # -----------------------------------
   # 5.12. get output emissions by species and year
 GCAM_nonco2_emissions_output <- GCAM_output %>%
